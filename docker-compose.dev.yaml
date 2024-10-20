@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ./django-shop
+      dockerfile: Dockerfile.dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./app/:/usr/src/app/
+      # - static:/static # Mounts a volume named static to the /static directory, ensuring that static files are stored persistently even after container is terminated/deleted and files will be available in our host machine.
+      # - sqllite_db:/shop_backend/db # Mounts a volume named sqllite_db to the /django_shop/db directory for persistent database storage.
+      # - django_logs:/logs # Mounts a volume named django_logs to the /logs directory to store logs persistently.
+    ports:
+      - 8000:8000
+    restart: always
+    env_file:
+      - ./.env.dev
+    depends_on:
+      - db
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=hello_django
+      - POSTGRES_PASSWORD=hello_django
+      - POSTGRES_DB=hello_django_dev
+
+volumes:
+  static:
+  sqllite_db:
+  postgres_data:
+  django_logs:
+  nginx_logs:
+
+
+
+# docker-compose build #command to build the images for both the Django and Nginx services
+# docker-compose up -d # Start the containers in the background using the up command with the -d flag
+# docker-compose ps #Check the status of the running containers to ensure everything is working correctly
