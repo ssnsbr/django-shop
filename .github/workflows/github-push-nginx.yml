@@ -24,7 +24,7 @@ jobs:
       -
         name: test
         run: |
-          echo ls
+          ls
           echo $context
           echo $working-directory
         
