@@ -22,6 +22,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
+        name: test
+        run: |
+          echo ls
+          echo $context
+          echo $working-directory
+        
+      -
         name: Build and push
         uses: docker/build-push-action@v6
         with:
