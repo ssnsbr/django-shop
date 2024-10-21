@@ -13,8 +13,12 @@
 # exec "$@"
 
 python manage.py flush --no-input
-python manage.py makemigrations
+python manage.py makemigrations users products vendors vendor_products
+echo "makemigrations done..."
 python manage.py migrate
+echo "migrate done..."
+python manage.py initadmin
+echo "initadmin done..."
 
 
 # collect all static files to the root directory
