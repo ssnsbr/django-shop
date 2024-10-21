@@ -2,13 +2,13 @@ name: ci
 
 on:
   push:
-
+defaults:
+  run:
+    working-directory: ./nginx
 jobs:
   docker:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./nginx
+
     steps:
       -
         name: Set up QEMU
