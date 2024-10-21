@@ -26,5 +26,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: nginx
+          file: ./nginx/Dockerfile
           push: true
           tags:  ${{ secrets.DOCKERHUB_USERNAME }}/portfolio:ngninx
