@@ -106,7 +106,7 @@ INSTALLED_APPS = [
     # "core.apps.CoreConfig",
     "users.apps.UsersConfig",
     "vendors.apps.VendorsConfig",
-    # "cart.apps.CartConfig",
+    "cart.apps.CartConfig",
     "products.apps.ProductsConfig",
     "vendor_products.apps.VendorProductsConfig",
     # "order.apps.OrderConfig",
