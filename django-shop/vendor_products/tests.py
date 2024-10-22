@@ -9,7 +9,7 @@ import uuid
 from definitions import ROOT_DIR
 from tests.test_common import TestUtils
 from tests.utils import query_reverse
-from vendor_products.models import VendorProduct
+from vendor_products.models import VendorListing
 from decimal import Decimal
 
 fake = Faker()
@@ -19,8 +19,8 @@ vendors_product_list_url = "vendor-products-list"
 vendors_product_detail_url = "vendor-products-detail"
 
 
-class VendorProductViewSetTestCase(APITestCase):
-    """Test case for VendorProduct viewsets"""
+class VendorListingViewSetTestCase(APITestCase):
+    """Test case for VendorListing viewsets"""
 
     def get_image_list(self):
         images_list = glob.glob(
@@ -119,11 +119,11 @@ class VendorProductViewSetTestCase(APITestCase):
             status.HTTP_201_CREATED,
             "response:" + str(response.content),
         )
-        self.assertEqual(VendorProduct.objects.count(), 2)
+        self.assertEqual(VendorListing.objects.count(), 2)
         self.assertEqual(
-            VendorProduct.objects.latest("id").price,
+            VendorListing.objects.latest("id").price,
             price,
-            VendorProduct.objects.latest("id"),
+            VendorListing.objects.latest("id"),
         )
 
     def test_duplicate_vendor_product(self):
@@ -196,7 +196,7 @@ class VendorProductViewSetTestCase(APITestCase):
             ),
         )
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(VendorProduct.objects.count(), 0)
+        self.assertEqual(VendorListing.objects.count(), 0)
 
     # Add test for filtering by non-existent vendor/product ID
     def test_filter_by_nonexistent_vendor(self):
@@ -244,7 +244,7 @@ class VendorProductViewSetTestCase(APITestCase):
         )
         # self.assertEqual(len(response.data), 0, f"response:  {response.data} ")
         self.assertIn(
-            "No VendorProduct matches the given query.", response.data["detail"]
+            "No VendorListing matches the given query.", response.data["detail"]
         )
 
     def test_update_vendor_product_invalid_data(self):
@@ -331,8 +331,8 @@ class VendorProductViewSetTestCase(APITestCase):
     # Add tests for more edge cases: zero price, large quantities, etc.
 
 
-class VendorProductViewSetEdgeCaseTestCase(APITestCase):
-    """Test case for VendorProduct viewsets handling edge cases"""
+class VendorListingViewSetEdgeCaseTestCase(APITestCase):
+    """Test case for VendorListing viewsets handling edge cases"""
 
     def setUp(self):
         """Set up necessary users, vendors, products, and vendor products"""
@@ -420,7 +420,7 @@ class VendorProductViewSetEdgeCaseTestCase(APITestCase):
             "response:" + str(response.content),
         )
         self.assertEqual(
-            VendorProduct.objects.latest("id").warehouse_quantity, large_quantity
+            VendorListing.objects.latest("id").warehouse_quantity, large_quantity
         )
 
     def test_update_vendor_product_with_zero_price(self):
@@ -486,7 +486,7 @@ class VendorProductViewSetEdgeCaseTestCase(APITestCase):
             status.HTTP_201_CREATED,
             "response:" + str(response.content),
         )
-        self.assertEqual(VendorProduct.objects.latest("id").price, Decimal("0.01"))
+        self.assertEqual(VendorListing.objects.latest("id").price, Decimal("0.01"))
 
     def test_create_vendor_product_with_maximum_price(self):
         """Test creating a vendor product with a very large price succeeds"""
@@ -503,7 +503,7 @@ class VendorProductViewSetEdgeCaseTestCase(APITestCase):
             status.HTTP_201_CREATED,
             "response:" + str(response.content),
         )
-        self.assertEqual(VendorProduct.objects.latest("id").price, Decimal(large_price))
+        self.assertEqual(VendorListing.objects.latest("id").price, Decimal(large_price))
 
     def test_update_vendor_product_with_maximum_price(self):
         """Test updating a vendor product with a very large price succeeds"""

@@ -58,10 +58,10 @@ class VendorListing(models.Model):
 class PriceHistory(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product_variant = models.ForeignKey(
-        ProductVariant, on_delete=models.CASCADE, related_name="vendor_product_variant"
+        ProductVariant, on_delete=models.CASCADE
     )
     vendor = models.ForeignKey(
-        Vendor, on_delete=models.CASCADE, related_name="vendor_products"
+        Vendor, on_delete=models.CASCADE
     )
     price = models.DecimalField(max_digits=10, decimal_places=2)
     effective_date = models.DateTimeField(auto_now=True)

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from vendor_products.serializers import VendorProductSerializer
+from vendor_products.serializers import VendorListingSerializer
 from .models import Vendor, VendorRating, VendorTransaction
 from typing import List, Dict, Any
 
@@ -12,7 +12,7 @@ class VendorSerializer(serializers.ModelSerializer):
 
     def get_vendor_products(self, obj) -> List[Dict[str, Any]]:
         products = obj.get_vendor_products()
-        return VendorProductSerializer(products, many=True).data
+        return VendorListingSerializer(products, many=True).data
 
     class Meta:
         model = Vendor

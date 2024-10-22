@@ -1,21 +1,20 @@
-from django.http import Http404, HttpResponseBadRequest, JsonResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from vendor_products.models import VendorProduct
+from vendor_products.models import VendorListing
 from vendor_products.permissions import IsOwnerOrReadOnly, IsVendorOwner
-from vendor_products.serializers import VendorProductSerializer, is_valid_uuid
-from rest_framework import status
+from vendor_products.serializers import VendorListingSerializer, is_valid_uuid
 
 
-class VendorProductViewSet(viewsets.ModelViewSet):
+class VendorListingViewSet(viewsets.ModelViewSet):
     """
-    ViewSet to handle CRUD operations for VendorProduct model.
+    ViewSet to handle CRUD operations for VendorListing model.
     Supports filtering by product and vendor IDs.
     """
 
     permission_classes = [IsOwnerOrReadOnly, IsVendorOwner]
-    queryset = VendorProduct.objects.all()
-    serializer_class = VendorProductSerializer
+    queryset = VendorListing.objects.all()
+    serializer_class = VendorListingSerializer
 
     def get_queryset(self):
         """
@@ -23,7 +22,7 @@ class VendorProductViewSet(viewsets.ModelViewSet):
         """
         product_id = self.request.GET.get("p")
         vendor_id = self.request.GET.get("v")
-        queryset = VendorProduct.objects.all()
+        queryset = VendorListing.objects.all()
 
         if product_id:
             if is_valid_uuid(product_id):

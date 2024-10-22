@@ -5,7 +5,7 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 
 from products.serializers import ProductMediaSerialiser
-from vendor_products.models import VendorProduct
+from vendor_products.models import VendorListing
 
 
 def is_valid_uuid(uuid_to_test, version=4):
@@ -16,7 +16,7 @@ def is_valid_uuid(uuid_to_test, version=4):
     return str(uuid_obj) == uuid_to_test
 
 
-class VendorProductSerializer(serializers.ModelSerializer):
+class VendorListingSerializer(serializers.ModelSerializer):
     vendor_name = serializers.SerializerMethodField("get_vendor_name")
     product_name = serializers.SerializerMethodField("get_product_name")
     product_image = serializers.SerializerMethodField("get_product_image")
@@ -70,11 +70,11 @@ class VendorProductSerializer(serializers.ModelSerializer):
         return value
 
     class Meta:
-        model = VendorProduct
+        model = VendorListing
         # fields =
         fields = "__all__"
         extra_fields = ["vendor_name", "product_name"]
 
 
-class VendorProductListSerializer(serializers.ListSerializer):
-    child = VendorProductSerializer()
+class VendorListingListSerializer(serializers.ListSerializer):
+    child = VendorListingSerializer()

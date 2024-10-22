@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from ..models import Vendor, VendorProduct
+from ..models import Vendor, VendorListing
 from products.models import Product
 from faker import Faker
 
@@ -42,7 +42,7 @@ class VendorModelTestCase(TestCase):
     def test_get_vendor_products(self):
         """Test that the vendor can retrieve related products"""
         product = Product.objects.create(name="Test Product")
-        VendorProduct.objects.create(
+        VendorListing.objects.create(
             vendor=self.vendor, product=product, price=10.00, warehouse_quantity=100
         )
         products = self.vendor.get_vendor_products()

@@ -1,4 +1,4 @@
 from django.contrib import admin
-from vendor_products.models import VendorProduct
+from vendor_products.models import VendorListing
 
-admin.site.register(VendorProduct)
+admin.site.register(VendorListing)

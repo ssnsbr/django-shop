@@ -122,7 +122,17 @@ class ProductAttribute(models.Model):
         return self.name
 
 
+class ProductAttributeOption(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE, related_name="options")
+    value = models.CharField(max_length=255)  # e.g., "XS", "S", "M", "L", etc.
+
+    def __str__(self):
+        return f"{self.attribute.name}: {self.value}"
+
+
 class ProductTypeAttribute(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product_type = models.ForeignKey(
         ProductType, on_delete=models.CASCADE, related_name="attributes"
     )
@@ -134,14 +144,15 @@ class ProductTypeAttribute(models.Model):
 
 
 class ProductAttributeValue(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name="attributes"
     )
     attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE)
-    value = models.CharField(max_length=255)
+    option = models.ForeignKey(ProductAttributeOption, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.product.name} - {self.attribute.name}: {self.value}"
+        return f"{self.product.name} - {self.attribute.name}: {self.option.value}"
 
 
 class ProductVariant(models.Model):
