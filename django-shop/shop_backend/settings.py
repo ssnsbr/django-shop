@@ -18,6 +18,7 @@ from pathlib import Path
 from environs import Env
 from .auth_config import *  # noqa
 from .db_config import DATABASES  # noqa
+from .bank_config import *  # noqa
 
 env = Env()
 env.read_env()
@@ -102,7 +103,7 @@ INSTALLED_APPS = [
     "dj_rest_auth.registration",
     "drf_spectacular",
     # "debug_toolbar",
-    # "azbankgateways",
+    "azbankgateways",
     # "core.apps.CoreConfig",
     "users.apps.UsersConfig",
     "vendors.apps.VendorsConfig",
@@ -110,7 +111,7 @@ INSTALLED_APPS = [
     "products.apps.ProductsConfig",
     "vendor_products.apps.VendorProductsConfig",
     "orders.apps.OrdersConfig",
-    # "payment.apps.PaymentConfig",
+    "payments.apps.PaymentsConfig",
     # "search.apps.SearchConfig",
     # "django_faker",
     #
