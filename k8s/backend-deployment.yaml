@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: ${DJANGO_BACKEND_IMAGE}
+        command: ["gunicorn", "shop_backend.wsgi:application", "--bind", "0.0.0.0:8000"]
+        envFrom:
+          - configMapRef:
+              name: backend-env  # Create a ConfigMap for .env.prod content
+        volumeMounts:
+          - mountPath: /home/app/django-shop/staticfiles
+            name: static-storage
+          - mountPath: /home/app/django-shop/mediafiles
+            name: media-storage
+      volumes:
+        - name: static-storage
+          persistentVolumeClaim:
+            claimName: static-volume-claim
+        - name: media-storage
+          persistentVolumeClaim:
+            claimName: media-volume-claim
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  ports:
+    - port: 8000
+  selector:
+    app: backend
