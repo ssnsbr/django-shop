@@ -3,6 +3,7 @@ from django.urls import reverse
 import uuid
 from django.core.exceptions import ValidationError
 from PIL import Image
+# from django_measurement.models import MeasurementField
 
 
 # Category model to categorize products
@@ -56,7 +57,12 @@ class Product(models.Model):
     description_json = models.TextField(blank=True, null=True)
 
     slug = models.SlugField(unique=True, blank=True, null=True)
-
+    # weight = MeasurementField(
+    #     measurement=Weight,
+    #     unit_choices=WeightUnits.CHOICES,
+    #     blank=True,
+    #     null=True,
+    # )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     rating = models.FloatField(null=True, blank=True)
@@ -114,6 +120,14 @@ class ProductMedia(models.Model):
 
 
 class ProductAttribute(models.Model):
+    GLOBAL = 1
+    LOCAL = 2
+    ATTRIBUTE_TYPE_CHOICES = [
+        (GLOBAL, 'Global'),
+        (LOCAL, 'Local'),
+    ]  # global (product-level) and local (variant-level) attributes
+    attribute_type = models.PositiveSmallIntegerField(choices=ATTRIBUTE_TYPE_CHOICES)
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
@@ -155,18 +169,68 @@ class ProductAttributeValue(models.Model):
         return f"{self.product.name} - {self.attribute.name}: {self.option.value}"
 
 
+# class ProductVariantManager(models.Manager):
+#     def get_or_create_variant(self, product, attributes):
+#         # Try to find an existing variant with the same product and attributes
+#         existing_variant = self.filter(product=product)
+#         print("checking...")
+#         for variant in existing_variant:
+#             if set(variant.attributes.all()) == set(attributes):
+#                 return variant, False  # Variant exists, return it
+
+#         # If not found, create a new variant
+#         variant = self.create(product=product)
+#         variant.attributes.set(attributes)  # Assign the attributes
+#         variant.save()
+#         return variant, True  # Variant created
+
+
 class ProductVariant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="subproducts"
+        Product, on_delete=models.CASCADE, related_name="variants"
     )
     attributes = models.ManyToManyField(ProductAttributeValue, related_name="subproducts")
     name = models.CharField(max_length=255)  # Optional, for easy reference
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # objects = ProductVariantManager()  # Use the custom manager
+
     def __str__(self):
         return f"{self.product.name} - {self.get_attributes_display()}"
 
     def get_attributes_display(self):
-        return ', '.join([f"{attr.attribute.name}: {attr.value}" for attr in self.attributes.all()])
+        return ', '.join([f"{attr.attribute.name}: {attr.option}" for attr in self.attributes.all()])
+
+    def clean(self):
+        """
+        Ensure that only local (variant-level) attributes are assigned to a ProductVariant.
+        """
+        for attr_value in self.attributes.all():
+            if attr_value.attribute.attribute_type != ProductAttribute.LOCAL:
+                raise ValidationError(
+                    f"The attribute '{attr_value.attribute.name}' is a global attribute and "
+                    f"cannot be used in a product variant."
+                )
+
+    def save(self, *args, **kwargs):
+        self.clean()
+
+        super(ProductVariant, self).save(*args, **kwargs)
+        # Create or update a row in the PriceHistory table if the attributes affect price
+        # self.update_price_history()
+
+    # def update_price_history(self): TODO
+    #     # Get attributes that affect price
+    #     price_affecting_attributes = self.attributes.filter(attribute__affects_price=True)
+
+    #     # Check if any price-affecting attributes exist
+    #     if price_affecting_attributes.exists():
+    #         for listing in self.vendor_listings.all():  # Assuming related name for VendorListing is `vendor_listings`
+    #             # Create a new price history entry for each vendor listing of this variant
+    #             PriceHistory.objects.create(
+    #                 product_variant=self,
+    #                 vendor=listing.vendor,
+    #                 price=listing.price
+    #             )

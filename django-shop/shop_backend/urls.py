@@ -18,14 +18,14 @@ from drf_spectacular.views import (
 
 urlpatterns = [
     path("anything-but-admin/", admin.site.urls),
-    # path("api/cart/", include("cart.urls")),
+    path("api/cart/", include("cart.urls")),
     path("api/", include("products.urls")),
     path("api/vendors/", include("vendors.urls")),
-    # path("api/", include("vendor_products.urls")),
-    # path("api/orders/", include("order.urls")),
-    # path("api/payment/", include("payment.urls")),
-    # path("api/", include("search.urls")),
-    # path("users/", include("django.contrib.auth.urls")),
+    path("api/", include("vendor_products.urls")),
+    path("api/orders/", include("orders.urls")),
+    path("api/payments/", include("payments.urls")),
+    path("api/", include("search.urls")),
+    path("users/", include("django.contrib.auth.urls")),
     path("api/dj-rest-auth/", include("dj_rest_auth.urls")),
     path(
         "api/dj-rest-auth/registration/",

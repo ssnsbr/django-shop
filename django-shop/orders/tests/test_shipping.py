@@ -1,8 +1,9 @@
 from django.test import TestCase
-from order.models import Order, ShippingMethod
+from orders.models import Order, ShippingMethod
 from django.contrib.auth import get_user_model
 
 CustomUser = get_user_model()
+
 
 class ShippingTests(TestCase):
     def setUp(self):

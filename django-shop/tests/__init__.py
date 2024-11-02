@@ -1,8 +1,8 @@
-from .test_admin_users  import *
-from .test_authenticated_users  import *
-from .test_unauthenticated_user  import *
-from .test_vendor_users  import *
-from .test_user_buying_process import  *
+from .test_admin_users import * # noqa
+from .test_authenticated_users import * # noqa
+from .test_unauthenticated_user import * # noqa
+from .test_vendor_users import * # noqa
+from .test_user_buying_process import * # noqa
 
 # Unauthenticated Users:
 # Ensure unauthenticated users can view product details.
@@ -33,11 +33,3 @@ from .test_user_buying_process import  *
 # Ensure admin users can view and edit all vendor details, including personal information.
 # Ensure admin users can view and manage all orders and payments.
 # Ensure admin users can manage user accounts, including authentication, permissions, and profiles.
-
-
-
-
-
-
-
-

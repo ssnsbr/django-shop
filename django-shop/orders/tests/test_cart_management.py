@@ -1,10 +1,11 @@
 from django.test import TestCase
-from vendors.models import VendorProduct, Vendor
+from vendors.models import Vendor
 from cart.models import Cart, CartItem
-from order.models import Order, OrderItem
+from orders.models import Order, OrderItem
 from django.contrib.auth import get_user_model
-
+from vendor_products.models import VendorListing
 CustomUser = get_user_model()
+
 
 class CartManagementTests(TestCase):
     def setUp(self):
@@ -14,8 +15,8 @@ class CartManagementTests(TestCase):
         )
 
         self.vendor = Vendor.objects.create(owner=self.vendoruser, store_name="Vendor A")
-       
-        self.vendor_product = VendorProduct.objects.create(
+
+        self.vendor_product = VendorListing.objects.create(
             vendor=self.vendor, name="Product A", price=50.00, warehouse_quantity=100
         )
         self.cart = Cart.objects.create(user=self.user)

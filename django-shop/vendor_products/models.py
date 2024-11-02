@@ -32,7 +32,15 @@ class VendorListing(models.Model):
         else:
             self.available = True
         super(VendorListing, self).save(*args, **kwargs)
+        # Ensure price history is updated
+        self.update_price_history()
 
+    def update_price_history(self):
+        PriceHistory.objects.create(
+            product_variant=self.product_variant,
+            vendor=self.vendor,
+            price=self.price
+        )
     class Meta:
         # unique_together = ('vendor', 'product',)
         constraints = [

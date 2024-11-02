@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from cart.models import Cart, CartItem
-from vendors.models import VendorListing, Vendor
+from vendors.models import Vendor
+from vendor_products.models import VendorListing
 from .models import Order, OrderItem, ShippingMethod, UserAddress
 
 CustomUser = get_user_model()

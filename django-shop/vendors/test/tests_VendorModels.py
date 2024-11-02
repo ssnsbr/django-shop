@@ -1,7 +1,8 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from ..models import Vendor, VendorListing
+from ..models import Vendor
 from products.models import Product
+from vendor_products.models import VendorListing
 from faker import Faker
 
 fake = Faker()

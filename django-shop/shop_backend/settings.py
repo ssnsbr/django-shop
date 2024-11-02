@@ -112,7 +112,7 @@ INSTALLED_APPS = [
     "vendor_products.apps.VendorProductsConfig",
     "orders.apps.OrdersConfig",
     "payments.apps.PaymentsConfig",
-    # "search.apps.SearchConfig",
+    "search.apps.SearchConfig",
     # "django_faker",
     #
 ]

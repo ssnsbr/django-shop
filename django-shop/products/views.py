@@ -1,10 +1,15 @@
 from rest_framework import viewsets
 from .models import Product, ProductMedia
-from .serializers import ProductMediaSerialiser, ProductSerializer
+from .serializers import ProductMediaSerialiser, ProductSerializer, ProductVariantSerializer
 from django.db.models import Q
 
-from .models import ProductType, ProductAttribute, ProductTypeAttribute, ProductAttributeValue
+from .models import ProductType, ProductAttribute, ProductTypeAttribute, ProductAttributeValue, ProductVariant
 from .serializers import ProductTypeSerializer, ProductAttributeSerializer, ProductTypeAttributeSerializer, ProductAttributeValueSerializer
+
+
+class ProductsVariantViewsets(viewsets.ModelViewSet):
+    queryset = ProductVariant.objects.all()
+    serializer_class = ProductVariantSerializer
 
 
 class ProductsViewsets(viewsets.ModelViewSet):

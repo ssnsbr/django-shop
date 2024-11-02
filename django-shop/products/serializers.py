@@ -3,6 +3,7 @@ from .models import (Product, ProductMedia,
                      ProductAttribute,
                      ProductTypeAttribute,
                      ProductAttributeValue,
+                     ProductAttributeOption, ProductVariant
                      )
 from rest_framework import serializers
 
@@ -47,13 +48,13 @@ class ProductMediaListSerializer(serializers.ListSerializer):
 class ProductTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductType
-        fields = ["id", "name", "slug", "description", "created_at", "updated_at"]
+        fields = "__all__"
 
 
 class ProductAttributeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductAttribute
-        fields = ["id", "name", "description"]
+        fields = "__all__"
 
 
 class ProductTypeAttributeSerializer(serializers.ModelSerializer):
@@ -65,16 +66,40 @@ class ProductTypeAttributeSerializer(serializers.ModelSerializer):
         fields = ["product_type", "attribute", "is_required"]
 
 
+class ProductAttributeOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductAttributeOption
+        fields = "__all__"
+
+
 class ProductAttributeValueSerializer(serializers.ModelSerializer):
-    product = serializers.SlugRelatedField(
-        queryset=Product.objects.all(), slug_field="name"
-    )
-    attribute = ProductAttributeSerializer(read_only=True)
+    attribute_name = serializers.CharField(source='attribute.name', read_only=True)
+    option_value = serializers.CharField(source='option.value', read_only=True)
 
     class Meta:
         model = ProductAttributeValue
-        fields = ["product", "attribute", "value"]
+        fields = ['attribute_name', 'option_value']
+    # product = serializers.SlugRelatedField(
+    #     queryset=Product.objects.all(), slug_field="name"
+    # )
+    # attribute = ProductAttributeSerializer(read_only=True)
+    # option = ProductAttributeOptionSerializer(read_only=True)
+        # fields = ["product", "attribute", "option"]
 
+
+class ProductVariantSerializer(serializers.ModelSerializer):
+    # attribute = ProductAttributeSerializer(read_only=True)
+    attributes = ProductAttributeValueSerializer(many=True, read_only=True)
+
+    product = serializers.SlugRelatedField(slug_field='id', queryset=Product.objects.all())  # Show product ID
+
+    class Meta:
+        model = ProductVariant
+        fields = "__all__"
+        extra_fields = ['product', "attributes"]
+
+    def get_attributes_display(self):
+        return ', '.join([f"{attr.attribute.name}: {attr.option.value}" for attr in self.attributes.all()])
 
 # class ProductSerializer(serializers.ModelSerializer):
 #     class Meta:

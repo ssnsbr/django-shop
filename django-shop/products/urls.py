@@ -5,7 +5,7 @@ from .views import (
     ProductTypeViewSet,
     ProductAttributeViewSet,
     ProductTypeAttributeViewSet,
-    ProductAttributeValueViewSet,
+    ProductAttributeValueViewSet, ProductsVariantViewsets
 )
 from rest_framework.routers import SimpleRouter
 
@@ -15,7 +15,7 @@ router.register("product", ProductsViewsets, basename="product")
 router.register(
     "products/<uuid:pk>/media", ProductsMediaViewsets, basename="product-media"
 )
-
+router.register("product-variants", ProductsVariantViewsets, basename="product-vaiant")
 
 router.register("product-types", ProductTypeViewSet, basename="product-type")
 router.register(
