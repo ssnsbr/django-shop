@@ -42,6 +42,7 @@ class VendorListing(models.Model):
             vendor=self.vendor,
             price=self.price
         )
+
     class Meta:
         # unique_together = ('vendor', 'product',)
         constraints = [

@@ -14,11 +14,11 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ${DJANGO_BACKEND_IMAGE}
+        image: ssnsbr/portfolio:django-shop
         command: ["gunicorn", "shop_backend.wsgi:application", "--bind", "0.0.0.0:8000"]
         envFrom:
           - configMapRef:
-              name: backend-env  # Create a ConfigMap for .env.prod content
+              name: backend-config  # Create a ConfigMap for .env.prod content
         volumeMounts:
           - mountPath: /home/app/django-shop/staticfiles
             name: static-storage

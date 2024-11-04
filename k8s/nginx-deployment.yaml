@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: ${NGINX_IMAGE}
+          image: ssnsbr/portfolio:nginx
           ports:
             - containerPort: 80
           volumeMounts:
