@@ -1,12 +1,14 @@
+import hashlib
+from itertools import product
 from django.db import models
 from django.urls import reverse
 import uuid
 from django.core.exceptions import ValidationError
 from PIL import Image
-# from django_measurement.models import MeasurementField
+from attributes.models import Attribute, AttributeValue, AttributeOption
+from django.db import transaction
 
 
-# Category model to categorize products
 class Category(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -51,11 +53,12 @@ class Product(models.Model):
     product_type = models.ForeignKey(
         ProductType, on_delete=models.SET_NULL, null=True, related_name="products"
     )
+    # attributes = models.ManyToManyField(AttributeOption, related_name="ProductAttributeValue")
 
     name = models.CharField(max_length=255)
     description_text = models.TextField(blank=True, null=True)
     description_json = models.TextField(blank=True, null=True)
-
+    approved = models.BooleanField(default=False)
     slug = models.SlugField(unique=True, blank=True, null=True)
     # weight = MeasurementField(
     #     measurement=Weight,
@@ -80,6 +83,7 @@ class Product(models.Model):
     def save(self, *args, **kwargs):
         # if not self.slug:
         #     self.slug = slugify(self.name+self.id)
+        self.generate_all_variants()
         super(Product, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -91,6 +95,61 @@ class Product(models.Model):
     def first_image(self):
         all_media = self.media.all()
         return all_media[0] if all_media else None  # TODO '/static/img/default_product.png'
+
+    def generate_all_variants(self):
+        product_type = self.product_type
+        required_attributes = TypeAttribute.objects.filter(
+            product_type=product_type,
+            attribute_type=TypeAttribute.VARIANT_ATTRIBUTE,
+            is_required=True
+        )
+
+        # Gather all options for each required attribute
+        attribute_options_map = {}
+        for type_attr in required_attributes:
+            options = AttributeOption.objects.filter(attribute=type_attr.attribute)
+            attribute_options_map[type_attr.attribute] = options
+
+        # Create all possible combinations of options
+        attribute_combinations = list(product(*attribute_options_map.values()))
+
+        variants_created = []
+        try:
+            with transaction.atomic():
+                for options_tuple in attribute_combinations:
+                    # For each combination, create or retrieve the AttributeValue instances
+                    attributes = []
+                    for option in options_tuple:
+                        attribute = option.attribute
+                        attribute_value, created = AttributeValue.objects.get_or_create(
+                            attribute=attribute,
+                            option=option
+                        )
+                        attributes.append(attribute_value)
+
+                    # Sort the attributes to ensure uniqueness
+                    attributes_sorted = sorted(attributes, key=lambda x: x.attribute.id)
+
+                    # Generate a unique hash for the attributes
+                    serialized_attributes = "|".join(f"{attr.attribute.id}:{attr.option.id}" for attr in attributes_sorted)
+                    attribute_hash = hashlib.sha256(serialized_attributes.encode()).hexdigest()
+
+                    # Check if a variant with this hash already exists
+                    if ProductVariant.objects.filter(product=self, attribute_hash=attribute_hash).exists():
+                        continue  # Skip if this variant already exists
+
+                    # Create the new variant
+                    variant = ProductVariant(product=self, name=self.name, attribute_hash=attribute_hash)
+                    variant.save()
+                    variant.attributes.set(attributes)  # Set all attributes at once
+                    variant.save()  # Final save to save relationships and hash
+                    variants_created.append(variant)
+                print("variants_created:", variants_created)
+
+        except ValidationError as e:
+            print(f"Validation Error: {e}")
+
+        return variants_created
 
 
 def validate_image(image):
@@ -115,111 +174,74 @@ class ProductMedia(models.Model):
     external_url = models.CharField(max_length=256, blank=True, null=True)
 
 
-################################################################################
-################################################################################
-
-
-class ProductAttribute(models.Model):
-    GLOBAL = 1
-    LOCAL = 2
-    ATTRIBUTE_TYPE_CHOICES = [
-        (GLOBAL, 'Global'),
-        (LOCAL, 'Local'),
-    ]  # global (product-level) and local (variant-level) attributes
-    attribute_type = models.PositiveSmallIntegerField(choices=ATTRIBUTE_TYPE_CHOICES)
-
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255)
-    description = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return self.name
-
-
-class ProductAttributeOption(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE, related_name="options")
-    value = models.CharField(max_length=255)  # e.g., "XS", "S", "M", "L", etc.
-
-    def __str__(self):
-        return f"{self.attribute.name}: {self.value}"
-
-
-class ProductTypeAttribute(models.Model):
+class TypeAttribute(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     product_type = models.ForeignKey(
         ProductType, on_delete=models.CASCADE, related_name="attributes"
     )
-    attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE)
-    is_required = models.BooleanField(default=False)
+    attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE)
+    is_required = models.BooleanField(default=True)
+    """Represents an attribute that can apply to products or variants."""
+    PRODUCT_ATTRIBUTE = 1
+    VARIANT_ATTRIBUTE = 2
+    ATTRIBUTE_TYPE_CHOICES = [
+        (PRODUCT_ATTRIBUTE, 'Product Level'),
+        (VARIANT_ATTRIBUTE, 'Variant Level'),
+    ]
+
+    attribute_type = models.PositiveSmallIntegerField(choices=ATTRIBUTE_TYPE_CHOICES)
+
+    class Meta:
+        unique_together = ('product_type', 'attribute')  # Ensures each attribute is assigned once per product type
 
     def __str__(self):
-        return f"{self.product_type.name} - {self.attribute.name}"
+        req = "Required" if self.is_required else "Optional"
+        att_type = "Product Level" if self.attribute_type == TypeAttribute.PRODUCT_ATTRIBUTE else "Variant Level"
+        return f"{self.product_type.name} - {self.attribute.name} - {att_type} - {req}"
 
 
 class ProductAttributeValue(models.Model):
+    """Values for global product attributes."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="attributes"
-    )
-    attribute = models.ForeignKey(ProductAttribute, on_delete=models.CASCADE)
-    option = models.ForeignKey(ProductAttributeOption, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_attributes")
+    attribute_value = models.ForeignKey(AttributeValue, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('product', 'attribute_value')
 
     def __str__(self):
-        return f"{self.product.name} - {self.attribute.name}: {self.option.value}"
+        return f"{self.product.name} - {self.attribute_value.option.attribute.name}: {self.attribute_value.option.value}"
 
+    # def clean(self):
+    #     super().clean()  # Call the parent's clean method
 
-# class ProductVariantManager(models.Manager):
-#     def get_or_create_variant(self, product, attributes):
-#         # Try to find an existing variant with the same product and attributes
-#         existing_variant = self.filter(product=product)
-#         print("checking...")
-#         for variant in existing_variant:
-#             if set(variant.attributes.all()) == set(attributes):
-#                 return variant, False  # Variant exists, return it
+    #     # Ensure all attributes are of type
+    #     for attr in self.attribute.all():
+    #         if attr.attribute_type != Attribute.PRODUCT_ATTRIBUTE:
+    #             raise ValidationError(
+    #                 f"The attribute '{attr.name}' cannot be used in a product."
+    #             )
 
-#         # If not found, create a new variant
-#         variant = self.create(product=product)
-#         variant.attributes.set(attributes)  # Assign the attributes
-#         variant.save()
-#         return variant, True  # Variant created
+    # def clean(self):
+    #     super().clean()  # Call the parent's clean method
+    #     if self.attribute.attribute_type != Attribute.VARIANT_ATTRIBUTE:
+    #         raise ValidationError(
+    #             f"The attribute '{self.attribute.name}' cannot be used in a variant."
+    #         )
 
+    #     existing_value = VariantAttributeValue.objects.filter(
+    #         variant__product=self.variant.product,
+    #         attribute=self.attribute
+    #     ).exclude(variant=self.variant)  # Exclude current variant to allow updates
 
-class ProductVariant(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="variants"
-    )
-    attributes = models.ManyToManyField(ProductAttributeValue, related_name="subproducts")
-    name = models.CharField(max_length=255)  # Optional, for easy reference
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    #     if existing_value.exists():
+    #         raise ValidationError(
+    #             f"The attribute '{self.attribute.name}' is already assigned to another variant of this product."
+    #         )
 
-    # objects = ProductVariantManager()  # Use the custom manager
-
-    def __str__(self):
-        return f"{self.product.name} - {self.get_attributes_display()}"
-
-    def get_attributes_display(self):
-        return ', '.join([f"{attr.attribute.name}: {attr.option}" for attr in self.attributes.all()])
-
-    def clean(self):
-        """
-        Ensure that only local (variant-level) attributes are assigned to a ProductVariant.
-        """
-        for attr_value in self.attributes.all():
-            if attr_value.attribute.attribute_type != ProductAttribute.LOCAL:
-                raise ValidationError(
-                    f"The attribute '{attr_value.attribute.name}' is a global attribute and "
-                    f"cannot be used in a product variant."
-                )
-
-    def save(self, *args, **kwargs):
-        self.clean()
-
-        super(ProductVariant, self).save(*args, **kwargs)
-        # Create or update a row in the PriceHistory table if the attributes affect price
-        # self.update_price_history()
+    # def save(self, *args, **kwargs):
+    #     self.clean()  # Enforce validation rules before saving
+    #     super().save(*args, **kwargs)
 
     # def update_price_history(self): TODO
     #     # Get attributes that affect price

@@ -1,20 +1,25 @@
 from rest_framework import viewsets
-from .models import Product, ProductMedia
-from .serializers import ProductMediaSerialiser, ProductSerializer, ProductVariantSerializer
+from .models import Product, ProductAttributeValue, ProductMedia
+from .serializers import ProductAttributeValueSerializer, ProductMediaSerialiser, ProductSerializer, ProductTypeAttributeSerializer
 from django.db.models import Q
 
-from .models import ProductType, ProductAttribute, ProductTypeAttribute, ProductAttributeValue, ProductVariant
-from .serializers import ProductTypeSerializer, ProductAttributeSerializer, ProductTypeAttributeSerializer, ProductAttributeValueSerializer
+from .models import ProductType, TypeAttribute
+from .serializers import ProductTypeSerializer
 
 
-class ProductsVariantViewsets(viewsets.ModelViewSet):
-    queryset = ProductVariant.objects.all()
-    serializer_class = ProductVariantSerializer
+class ProductsAttributesValueViewsets(viewsets.ModelViewSet):
+    queryset = ProductAttributeValue.objects.all()
+    serializer_class = ProductAttributeValueSerializer
 
 
 class ProductsViewsets(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    # queryset = Product.objects.all()
     serializer_class = ProductSerializer
+
+    def get_queryset(self):
+        # Only return approved products
+        # TODO write tests for this
+        return Product.objects.filter(approved=True)
 
 
 class ProductsMediaViewsets(viewsets.ModelViewSet):  # read only
@@ -43,16 +48,6 @@ class ProductTypeViewSet(viewsets.ModelViewSet):
     serializer_class = ProductTypeSerializer
 
 
-class ProductAttributeViewSet(viewsets.ModelViewSet):
-    queryset = ProductAttribute.objects.all()
-    serializer_class = ProductAttributeSerializer
-
-
 class ProductTypeAttributeViewSet(viewsets.ModelViewSet):
-    queryset = ProductTypeAttribute.objects.all()
+    queryset = TypeAttribute.objects.all()
     serializer_class = ProductTypeAttributeSerializer
-
-
-class ProductAttributeValueViewSet(viewsets.ModelViewSet):
-    queryset = ProductAttributeValue.objects.all()
-    serializer_class = ProductAttributeValueSerializer

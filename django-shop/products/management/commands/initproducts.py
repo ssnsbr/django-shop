@@ -1,5 +1,7 @@
 from os import pardir, path
 import random
+
+from django.db import Error
 from definitions import ROOT_DIR
 __author__ = 'admin@email.com'
 
@@ -7,8 +9,9 @@ import glob
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from products.models import Category, Product, ProductType, ProductAttribute, ProductTypeAttribute, ProductAttributeValue, ProductMedia, ProductAttributeOption, ProductVariant
+from products.models import Attribute, AttributeOption, AttributeValue, Category, Product, ProductAttributeValue, ProductType, TypeAttribute, ProductMedia
 from vendors.models import Vendor
+from product_variants.models import ProductVariant, VariantAttributeValue
 from vendor_products.models import VendorListing
 from tests.test_common import TestUtils
 from faker import Faker
@@ -23,13 +26,13 @@ multimediaـsub_category_slugs = ["dvd", "books"]
 product_types = ["تی شرت", "کفش", "کتاب", "دی وی دی"]
 product_types_slugs = ["t-shirt", "shoe", "book", "dvd"]
 # attributes and att_values
-materia_att = {"material": ["Cotton", "Polyester", "Blend", "Nylon"], "local": False}
-color_att = {"color": ["White", "Black"], "local": True}  # , "Blue", "Red", "Green", "Yellow"
-shoe_size_att = {"size": [38, 39], "local": True}  # , 40, 41, 42, 43
-t_shirt_size_att = {"size": ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"], "local": True}
-t_shirt_sleeve_att = {"sleeve": ["Short", "Long", "Half-length"], "local": False}
-brand_att = {"brand": ["Adidas", "Nike", "Puma", "Fila", "Levi's"], "local": False}
-publisher_att = {"publisher": ["Publisher1", "Publisher2"], "local": False}
+materia_att = {"material": ["Cotton", "Polyester", "Blend", "Nylon"], "type": "variant", "required": True}
+color_att = {"color": ["White", "Black", "Blue"], "type": "variant", "required": True}  # , "Blue", "Red", "Green", "Yellow"
+shoe_size_att = {"size": [38, 39], "type": "variant", "required": True}  # , 40, 41, 42, 43
+t_shirt_size_att = {"size": ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"], "type": "variant", "required": True}
+t_shirt_sleeve_att = {"sleeve": ["Short", "Long", "Half-length"], "type": "variant", "required": True}
+brand_att = {"brand": ["Adidas", "Nike", "Puma", "Fila", "Levi's"], "type": "product", "required": True}
+publisher_att = {"publisher": ["Publisher1", "Publisher2"], "type": "product", "required": True}
 # types and attributes
 types_and_attributes = {"t-shirt": [color_att, t_shirt_size_att, t_shirt_sleeve_att, brand_att, materia_att],
                         "shoe": [color_att, brand_att, materia_att, shoe_size_att],
@@ -150,34 +153,31 @@ class Command(BaseCommand):
             for att_dic in att_dic_list:  # {"size": [38, 39, 40, 41, 42, 43]}
                 k = list(att_dic.keys())[0]  # "size"
                 t = ProductType.objects.get(slug=type)
-                ـProductAttribute = ProductAttribute.objects.create(
+                _required = att_dic["required"]
+                attribute_type = TypeAttribute.VARIANT_ATTRIBUTE if att_dic["type"] == "variant" else TypeAttribute.PRODUCT_ATTRIBUTE
+                ـProductAttribute = Attribute.objects.create(
                     name=k,
                     description=k,
-                    attribute_type=ProductAttribute.LOCAL if att_dic["local"] else ProductAttribute.GLOBAL,
                 )
                 for v in att_dic[k]:  # [38, 39, 40, 41, 42, 43]
-                    ProductAttributeOption.objects.create(
+                    AttributeOption.objects.create(
                         value=v,
                         attribute=ـProductAttribute,
                     )
-                ProductTypeAttribute.objects.create(
+                TypeAttribute.objects.create(
                     attribute=ـProductAttribute,
                     product_type=t,
-                    is_required=False
+                    is_required=_required,
+                    attribute_type=attribute_type
                 )
         self.stdout.write(
             self.style.SUCCESS("Successfully added ProductAttribute/Options/Types to the database.")
         )
 
-    def populate_products(self):
-        sample_product = {"name": "کفش نایک آبی",
-                          "product_type": "shoe",
-                          "description": "عالی!",
-                          "slug": "nike-blue-209999",
-                          "category": "shoe"
-                          }
-        product_type = ProductType.objects.get(slug=sample_product["product_type"])
+    def populate_products(self, sample_product):
 
+        _product_type = ProductType.objects.get(slug=sample_product["product_type"])
+        print("product_type:", _product_type)
         selected_images = fake.random_elements(
             elements=self.images_list, length=random.randint(1, 5), unique=True
         )
@@ -187,8 +187,17 @@ class Command(BaseCommand):
             category=Category.objects.get(slug=sample_product["category"]),
             description_text=sample_product["description"],
             slug=sample_product["slug"],
-            product_type=product_type,
+            product_type=_product_type,
+            approved=True,
         )
+        product_atts = TypeAttribute.objects.filter(product_type=_product_type)
+        for k, v in sample_product["attributes"].items():
+            brand_att = product_atts.filter(attribute__name=k).first()
+            print("brand_att:", brand_att)
+            obj_atts_options = AttributeOption.objects.filter(attribute=brand_att.attribute, value=v).first()
+            ProductAttributeValue.objects.create(product=product, attribute=brand_att.attribute,
+                                                 option=obj_atts_options)
+
         for i in selected_images:
             ProductMedia.objects.create(
                 product=product,
@@ -198,21 +207,17 @@ class Command(BaseCommand):
             self.style.SUCCESS("Successfully added Products to the database.")
         )
 
-    def populate_product_variants(self):
-        _product_obj = random.choice(Product.objects.all())
-        # _product_variant_obj = _product_obj.variants.all()
-        _product_variant_obj = ProductVariant.objects.create(product=_product_obj)
-        # _obj_atts = _product_obj.product_type.attributes.all()
-        _obj_atts = ProductTypeAttribute.objects.filter(product_type=_product_obj.product_type)
-        for sample_att in (_obj_atts):  # random.sample(list(_obj_atts), random.randint(0, len(_obj_atts))):
-            # sample_att = sample_att.attribute
-            # print(sample_att.__class__)
-            if sample_att.attribute.attribute_type == ProductAttribute.LOCAL:
-                _obj_atts_options = ProductAttributeOption.objects.filter(attribute=sample_att.attribute)
-                _product_variant_obj.attributes.add(
-                    ProductAttributeValue.objects.create(product=_product_obj,
-                                                         attribute=sample_att.attribute,
-                                                         option=random.choice(_obj_atts_options)))
+    def populate_product_variants(self, slug, variants):
+        _product_obj = Product.objects.get(slug=slug)
+        product_atts = TypeAttribute.objects.filter(product_type=_product_obj.product_type)
+
+        for variant in variants:
+            for k, v in variant.items():  # size , 39
+                brand_att = product_atts.filter(attribute__name=k).first()
+                obj_atts_options = AttributeOption.objects.filter(attribute=brand_att.attribute, value=v).first()
+                VariantAttributeValue.objects.create(variant=_product_variant_obj, attribute=brand_att.attribute,
+                                                     option=obj_atts_options)
+            _product_variant_obj = ProductVariant.objects.create(product=_product_obj)
 
         VendorListing.objects.create(
             product=_product_obj,
@@ -221,6 +226,60 @@ class Command(BaseCommand):
             warehouse_quantity=random.randint(5, 50),
             price=random.randint(5, 500) * 1000)
 
+    def populate_product_variants2(self, slug, variants):
+        _product_obj = Product.objects.get(slug=slug)
+        product_atts = TypeAttribute.objects.filter(product_type=_product_obj.product_type)
+        att_to_add_to_variant = []
+        for variant in variants:
+            for k, v in variant.items():  # size , 39
+                brand_att = product_atts.filter(attribute__name=k).first()
+                obj_atts_options = AttributeOption.objects.filter(attribute=brand_att.attribute, value=v).first()
+                # try:
+                att_to_add_to_variant.append(AttributeValue.objects.get_or_create(attribute=brand_att.attribute,
+                                                                                  option=obj_atts_options))
+                # except Error as e:
+                #     print(e)
+        print("Making ProductVariant:")
+        _product_variant_obj = ProductVariant.objects.create(product=_product_obj)
+        print("Adding Attributes ProductVariant:", att_to_add_to_variant)
+
+        _product_variant_obj.attributes.set(av[0] for av in att_to_add_to_variant)
+        VendorListing.objects.create(
+            product=_product_obj,
+            product_variant=_product_variant_obj,
+            vendor=random.choice(Vendor.objects.all()),
+            warehouse_quantity=random.randint(5, 50),
+            price=random.randint(5, 500) * 1000)
+        # except Error as e:
+        #     print(e)
+    # def populate_product_variants_2(self):
+    #     try:
+    #         shoe_product = random.choice(Product.objects.all())
+    #         shoe_variant = ProductVariant.objects.create(product=shoe_product)
+    #         product_type = shoe_product.product_type
+    #         product_attributes = product_type.attributes.all()
+    #         # _obj_atts = _product_obj.product_type.attributes.all()
+    #         # _obj_atts = TypeAttribute.objects.filter(product_type=_product_obj.product_type)
+    #         color_att = _obj_atts.filter(name="color")
+    #         size_att = _obj_atts.filter(name="size")
+    #         for sample_att in (product_attributes):  # random.sample(list(_obj_atts), random.randint(0, len(_obj_atts))):
+    #             if sample_att.attribute_type == Attribute.VARIANT_ATTRIBUTE:
+    #                 # sample_att = sample_att.attribute
+    #                 # print(sample_att.__class__)
+    #             if sample_att.attribute.attribute_type == Attribute.VARIANT_ATTRIBUTE:
+    #                 _obj_atts_options = AttributeOption.objects.filter(attribute=sample_att.attribute)
+    #                 VariantAttributeValue.objects.create(variant=_product_variant_obj, attribute=sample_att.attribute,
+    #                                                      option=random.choice(_obj_atts_options))
+
+    #         VendorListing.objects.create(
+    #             product=_product_obj,
+    #             product_variant=_product_variant_obj,
+    #             vendor=random.choice(Vendor.objects.all()),
+    #             warehouse_quantity=random.randint(5, 50),
+    #             price=random.randint(5, 500) * 1000)
+    #     except Exception as e:
+    #         print(e)
+
     def handle(self, *args, **options):
         # print(path.join(path.abspath(path.join(ROOT_DIR, pardir)), "fakephotos\\saloerphotos\\saloerplaceholders\\*.png"))
         images_path = path.abspath(path.join(ROOT_DIR, pardir))
@@ -228,27 +287,47 @@ class Command(BaseCommand):
         self.images_list = [x[len(images_path):] for x in self.images_list]
         # print(self.images_list)
 
-        # Category.objects.all().delete()
-        # self.populate_categories()
+        Category.objects.all().delete()
+        self.populate_categories()
 
-        # ProductType.objects.all().delete()
-        # self.populate_types()
+        ProductType.objects.all().delete()
+        self.populate_types()
 
-        # get_user_model().objects.all().delete()
-        # self.populate_users()
+        get_user_model().objects.all().delete()
+        self.populate_users()
 
-        # Vendor.objects.all().delete()
-        # self.populate_vendors()
-
-        ProductAttribute.objects.all().delete()
-        ProductAttributeOption.objects.all().delete()
-        ProductTypeAttribute.objects.all().delete()
+        Vendor.objects.all().delete()
+        self.populate_vendors()
+        AttributeValue.objects.all().delete()
+        Attribute.objects.all().delete()
+        AttributeOption.objects.all().delete()
+        TypeAttribute.objects.all().delete()
         self.populate_products_types_attributes()
 
         Product.objects.all().delete()
-        self.populate_products()
+        self.populate_products(sample_product={"name": "کفش نایک آبی",
+                                               "product_type": "shoe",
+                                               "description": "عالی!",
+                                               "slug": "nike-blue-209999",
+                                               "category": "shoe",
+                                               "attributes": {"brand": "Nike", "color": "Blue", "material": "Cotton"}
+                                               })
+
+        self.populate_products(sample_product={"name": "کفش آدیداس 2099",
+                                               "product_type": "shoe",
+                                               "description": "عالی!",
+                                               "slug": "adidas-2099",
+                                               "category": "shoe",
+                                               "attributes": {"brand": "Adidas", "material": "Cotton"}
+                                               })
 
         VendorListing.objects.all().delete()
         ProductVariant.objects.all().delete()
-        for i in range(10):
-            self.populate_product_variants()
+        # for i in range(10):
+        #     self.populate_product_variants()
+        self.populate_product_variants2("adidas-2099", [{"color": "Blue", "size": "38"},
+                                                        {"color": "Blue", "size": "39"},
+                                                        {"color": "Black", "size": "38"}])
+        self.populate_product_variants2("nike-blue-209999", [{"size": "38"},
+                                                             {"size": "39"},
+                                                             {"size": "39"}])

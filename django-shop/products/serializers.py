@@ -1,12 +1,10 @@
-from .models import (Product, ProductMedia,
+from .models import (Product, ProductAttributeValue, ProductMedia,
                      ProductType,
-                     ProductAttribute,
-                     ProductTypeAttribute,
-                     ProductAttributeValue,
-                     ProductAttributeOption, ProductVariant
+                     TypeAttribute
+
                      )
 from rest_framework import serializers
-
+from attributes.serializers import AttributeSerializer
 from django.contrib.auth import get_user_model
 from typing import Dict, Any
 
@@ -51,25 +49,13 @@ class ProductTypeSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ProductAttributeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductAttribute
-        fields = "__all__"
-
-
 class ProductTypeAttributeSerializer(serializers.ModelSerializer):
     product_type = ProductTypeSerializer(read_only=True)
-    attribute = ProductAttributeSerializer(read_only=True)
+    attribute = AttributeSerializer(read_only=True)
 
     class Meta:
-        model = ProductTypeAttribute
+        model = TypeAttribute
         fields = ["product_type", "attribute", "is_required"]
-
-
-class ProductAttributeOptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductAttributeOption
-        fields = "__all__"
 
 
 class ProductAttributeValueSerializer(serializers.ModelSerializer):
@@ -86,20 +72,6 @@ class ProductAttributeValueSerializer(serializers.ModelSerializer):
     # option = ProductAttributeOptionSerializer(read_only=True)
         # fields = ["product", "attribute", "option"]
 
-
-class ProductVariantSerializer(serializers.ModelSerializer):
-    # attribute = ProductAttributeSerializer(read_only=True)
-    attributes = ProductAttributeValueSerializer(many=True, read_only=True)
-
-    product = serializers.SlugRelatedField(slug_field='id', queryset=Product.objects.all())  # Show product ID
-
-    class Meta:
-        model = ProductVariant
-        fields = "__all__"
-        extra_fields = ['product', "attributes"]
-
-    def get_attributes_display(self):
-        return ', '.join([f"{attr.attribute.name}: {attr.option.value}" for attr in self.attributes.all()])
 
 # class ProductSerializer(serializers.ModelSerializer):
 #     class Meta:
@@ -130,3 +102,38 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 #             )
 
 #         return data
+
+
+# class VariantAttributeValueSerializer(serializers.ModelSerializer):
+#     # attribute = serializers.CharField(source='attribute.name', read_only=True)
+#     # option = AttributeOptionSerializer(read_only=True, many=True)
+#     attributes = AttributeSerializer(many=True, read_only=True)
+#     option = AttributeOptionSerializer()
+
+#     class Meta:
+#         model = VariantAttributeValue
+#         fields = "__all__"  # ['option', 'variant']
+#     # product = serializers.SlugRelatedField(
+
+
+# class ProductVariantSerializer(serializers.ModelSerializer):
+    # attribute = VarinatAttributeValueSerializer(read_only=True)
+    # variant_attributes = VariantAttributeValueSerializer(many=True, read_only=True)
+    # option = AttributeOptionSerializer(read_only=True, many=True)
+    # product = ProductSerializer(read_only=True)
+    # product = serializers.SlugRelatedField(slug_field='id', queryset=Product.objects.all())  # Show product ID
+    # attributes = serializers.SerializerMethodField("get_attributes")
+    # attribute = serializers.RelatedField( read_only=True)
+
+    # def get_attributes(self, ins):
+    #     data = VariantAttributeValueSerializer(ins.variant_attributes).data
+    #     return data
+
+    # class Meta:
+    #     model = ProductVariant
+    #     # fields = "__all__"
+    #     # extra_fields = ['product', "attributes", "option"]
+    #     fields = ['id', 'product', 'name', 'created_at', 'updated_at', 'variant_attributes']
+
+    # def get_attributes_display(self):
+    #     return ', '.join([f"{attr.attribute.name}: {attr.option.value}" for attr in self.attributes.all()])

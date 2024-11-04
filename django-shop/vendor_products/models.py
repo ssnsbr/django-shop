@@ -1,7 +1,8 @@
 import uuid
 from django.db import models
 
-from products.models import Product, ProductVariant
+from products.models import Product
+from product_variants.models import ProductVariant
 from vendors.models import Vendor, VendorDiscount
 
 

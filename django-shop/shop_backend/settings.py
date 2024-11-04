@@ -113,6 +113,10 @@ INSTALLED_APPS = [
     "orders.apps.OrdersConfig",
     "payments.apps.PaymentsConfig",
     "search.apps.SearchConfig",
+    'django_extensions',
+    "attributes.apps.AttributesConfig",
+    "product_variants.apps.ProductVariantsConfig",
+
     # "django_faker",
     #
 ]
