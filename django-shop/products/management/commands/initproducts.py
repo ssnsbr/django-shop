@@ -208,23 +208,25 @@ class Command(BaseCommand):
         )
 
     def populate_product_variants(self, slug, variants):
-        _product_obj = Product.objects.get(slug=slug)
-        product_atts = TypeAttribute.objects.filter(product_type=_product_obj.product_type)
+        pass
+    # def populate_product_variants(self, slug, variants):
+    #     _product_obj = Product.objects.get(slug=slug)
+    #     product_atts = TypeAttribute.objects.filter(product_type=_product_obj.product_type)
 
-        for variant in variants:
-            for k, v in variant.items():  # size , 39
-                brand_att = product_atts.filter(attribute__name=k).first()
-                obj_atts_options = AttributeOption.objects.filter(attribute=brand_att.attribute, value=v).first()
-                VariantAttributeValue.objects.create(variant=_product_variant_obj, attribute=brand_att.attribute,
-                                                     option=obj_atts_options)
-            _product_variant_obj = ProductVariant.objects.create(product=_product_obj)
+    #     for variant in variants:
+    #         for k, v in variant.items():  # size , 39
+    #             brand_att = product_atts.filter(attribute__name=k).first()
+    #             obj_atts_options = AttributeOption.objects.filter(attribute=brand_att.attribute, value=v).first()
+    #             VariantAttributeValue.objects.create(variant=_product_variant_obj, attribute=brand_att.attribute,
+    #                                                  option=obj_atts_options)
+    #         _product_variant_obj = ProductVariant.objects.create(product=_product_obj)
 
-        VendorListing.objects.create(
-            product=_product_obj,
-            product_variant=_product_variant_obj,
-            vendor=random.choice(Vendor.objects.all()),
-            warehouse_quantity=random.randint(5, 50),
-            price=random.randint(5, 500) * 1000)
+    #     VendorListing.objects.create(
+    #         product=_product_obj,
+    #         product_variant=_product_variant_obj,
+    #         vendor=random.choice(Vendor.objects.all()),
+    #         warehouse_quantity=random.randint(5, 50),
+    #         price=random.randint(5, 500) * 1000)
 
     def populate_product_variants2(self, slug, variants):
         _product_obj = Product.objects.get(slug=slug)

@@ -1,12 +1,9 @@
-import hashlib
-from itertools import product
 from django.db import models
 from django.urls import reverse
 import uuid
 from django.core.exceptions import ValidationError
 from PIL import Image
-from attributes.models import Attribute, AttributeValue, AttributeOption
-from django.db import transaction
+from attributes.models import Attribute, AttributeValue
 
 
 class Category(models.Model):
@@ -96,60 +93,60 @@ class Product(models.Model):
         all_media = self.media.all()
         return all_media[0] if all_media else None  # TODO '/static/img/default_product.png'
 
-    def generate_all_variants(self):
-        product_type = self.product_type
-        required_attributes = TypeAttribute.objects.filter(
-            product_type=product_type,
-            attribute_type=TypeAttribute.VARIANT_ATTRIBUTE,
-            is_required=True
-        )
+    # def generate_all_variants(self):
+    #     product_type = self.product_type
+    #     required_attributes = TypeAttribute.objects.filter(
+    #         product_type=product_type,
+    #         attribute_type=TypeAttribute.VARIANT_ATTRIBUTE,
+    #         is_required=True
+    #     )
 
-        # Gather all options for each required attribute
-        attribute_options_map = {}
-        for type_attr in required_attributes:
-            options = AttributeOption.objects.filter(attribute=type_attr.attribute)
-            attribute_options_map[type_attr.attribute] = options
+    #     # Gather all options for each required attribute
+    #     attribute_options_map = {}
+    #     for type_attr in required_attributes:
+    #         options = AttributeOption.objects.filter(attribute=type_attr.attribute)
+    #         attribute_options_map[type_attr.attribute] = options
 
-        # Create all possible combinations of options
-        attribute_combinations = list(product(*attribute_options_map.values()))
+    #     # Create all possible combinations of options
+    #     attribute_combinations = list(product(*attribute_options_map.values()))
 
-        variants_created = []
-        try:
-            with transaction.atomic():
-                for options_tuple in attribute_combinations:
-                    # For each combination, create or retrieve the AttributeValue instances
-                    attributes = []
-                    for option in options_tuple:
-                        attribute = option.attribute
-                        attribute_value, created = AttributeValue.objects.get_or_create(
-                            attribute=attribute,
-                            option=option
-                        )
-                        attributes.append(attribute_value)
+    #     variants_created = []
+    #     try:
+    #         with transaction.atomic():
+    #             for options_tuple in attribute_combinations:
+    #                 # For each combination, create or retrieve the AttributeValue instances
+    #                 attributes = []
+    #                 for option in options_tuple:
+    #                     attribute = option.attribute
+    #                     attribute_value, created = AttributeValue.objects.get_or_create(
+    #                         attribute=attribute,
+    #                         option=option
+    #                     )
+    #                     attributes.append(attribute_value)
 
-                    # Sort the attributes to ensure uniqueness
-                    attributes_sorted = sorted(attributes, key=lambda x: x.attribute.id)
+    #                 # Sort the attributes to ensure uniqueness
+    #                 attributes_sorted = sorted(attributes, key=lambda x: x.attribute.id)
 
-                    # Generate a unique hash for the attributes
-                    serialized_attributes = "|".join(f"{attr.attribute.id}:{attr.option.id}" for attr in attributes_sorted)
-                    attribute_hash = hashlib.sha256(serialized_attributes.encode()).hexdigest()
+    #                 # Generate a unique hash for the attributes
+    #                 serialized_attributes = "|".join(f"{attr.attribute.id}:{attr.option.id}" for attr in attributes_sorted)
+    #                 attribute_hash = hashlib.sha256(serialized_attributes.encode()).hexdigest()
 
-                    # Check if a variant with this hash already exists
-                    if ProductVariant.objects.filter(product=self, attribute_hash=attribute_hash).exists():
-                        continue  # Skip if this variant already exists
+    #                 # Check if a variant with this hash already exists
+    #                 if ProductVariant.objects.filter(product=self, attribute_hash=attribute_hash).exists():
+    #                     continue  # Skip if this variant already exists
 
-                    # Create the new variant
-                    variant = ProductVariant(product=self, name=self.name, attribute_hash=attribute_hash)
-                    variant.save()
-                    variant.attributes.set(attributes)  # Set all attributes at once
-                    variant.save()  # Final save to save relationships and hash
-                    variants_created.append(variant)
-                print("variants_created:", variants_created)
+    #                 # Create the new variant
+    #                 variant = ProductVariant(product=self, name=self.name, attribute_hash=attribute_hash)
+    #                 variant.save()
+    #                 variant.attributes.set(attributes)  # Set all attributes at once
+    #                 variant.save()  # Final save to save relationships and hash
+    #                 variants_created.append(variant)
+    #             print("variants_created:", variants_created)
 
-        except ValidationError as e:
-            print(f"Validation Error: {e}")
+    #     except ValidationError as e:
+    #         print(f"Validation Error: {e}")
 
-        return variants_created
+    #     return variants_created
 
 
 def validate_image(image):

@@ -82,8 +82,7 @@ class OrderAppTests(TestCase):
         self.assertEqual(order.items.count(), 1)
         self.assertEqual(
             order.get_total_cost(),
-            (self.vendor_product_a.price * self.cart_item_a.quantity)
-            + self.shipping_method.price,
+            (self.vendor_product_a.price * self.cart_item_a.quantity) + self.shipping_method.price,
         )
         self.assertEqual(order.shipping_method, self.shipping_method)
         self.assertEqual(order.address, self.address)

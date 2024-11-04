@@ -1,17 +1,17 @@
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
-from products.models import (
+from .models import (
     Category,
     Product,
-    ProductAttributeOption,
     ProductType,
-    ProductAttribute,
     TypeAttribute,
     ProductAttributeValue,
     ProductMedia,
 )
 from django.urls import reverse
+from attributes.models import Attribute, AttributeOption
+from product_variants.models import ProductVariant
 
 
 class CategoryModelTest(TestCase):
@@ -114,26 +114,14 @@ class ProductTypeModelTest(TestCase):
         self.assertEqual(self.product_type.__str__(), self.product_type.name)
 
 
-class ProductAttributeModelTest(TestCase):
-
-    def setUp(self):
-        self.attribute = ProductAttribute.objects.create(
-            name="Color", description="Product color", attribute_type=ProductAttribute.LOCAL
-        )
-
-    def test_product_attribute_creation(self):
-        self.assertTrue(isinstance(self.attribute, ProductAttribute))
-        self.assertEqual(self.attribute.__str__(), self.attribute.name)
-
-
 class ProductTypeAttributeModelTest(TestCase):
 
     def setUp(self):
         self.product_type = ProductType.objects.create(
             name="Clothing", slug="clothing", description="Clothing description"
         )
-        self.attribute = ProductAttribute.objects.create(
-            name="Color", description="Product color", attribute_type=ProductAttribute.LOCAL
+        self.attribute = Attribute.objects.create(
+            name="Color", description="Product color", attribute_type=Attribute.LOCAL
         )
         self.product_type_attribute = TypeAttribute.objects.create(
             product_type=self.product_type, attribute=self.attribute, is_required=True
@@ -161,10 +149,10 @@ class ProductAttributeValueModelTest(TestCase):
             category=self.category,
             product_type=self.product_type,
         )
-        self.attribute = ProductAttribute.objects.create(
-            name="Color", description="Product color", attribute_type=ProductAttribute.LOCAL
+        self.attribute = Attribute.objects.create(
+            name="Color", description="Product color", attribute_type=Attribute.LOCAL
         )
-        self.attribute_option = ProductAttributeOption.objects.create(
+        self.attribute_option = AttributeOption.objects.create(
             attribute=self.attribute, value="Red"
         )
         self.attribute_value = ProductAttributeValue.objects.create(
@@ -178,20 +166,17 @@ class ProductAttributeValueModelTest(TestCase):
             f"{self.product.name} - {self.attribute.name}: {self.attribute_value.option}",
         )
 
-from django.test import TestCase
-from django.core.exceptions import ValidationError
-from .models import Product, ProductVariant, ProductAttribute, ProductAttributeOption, ProductAttributeValue
 
 class ProductVariantTest(TestCase):
     def setUp(self):
         # Create necessary objects for the test
         self.product = Product.objects.create(name="Test Product")
-        self.attribute_size = ProductAttribute.objects.create(name="size", attribute_type=ProductAttribute.LOCAL)
-        self.attribute_color = ProductAttribute.objects.create(name="color", attribute_type=ProductAttribute.LOCAL)
+        self.attribute_size = Attribute.objects.create(name="size", attribute_type=Attribute.LOCAL)
+        self.attribute_color = Attribute.objects.create(name="color", attribute_type=Attribute.LOCAL)
 
         # Create attribute options
-        self.size_option = ProductAttributeOption.objects.create(attribute=self.attribute_size, value="38")
-        self.color_option = ProductAttributeOption.objects.create(attribute=self.attribute_color, value="White")
+        self.size_option = AttributeOption.objects.create(attribute=self.attribute_size, value="38")
+        self.color_option = AttributeOption.objects.create(attribute=self.attribute_color, value="White")
 
         # Create attribute values
         self.size_value = ProductAttributeValue.objects.create(
@@ -205,11 +190,11 @@ class ProductVariantTest(TestCase):
         # Create a ProductVariant with the given attributes
         variant1 = ProductVariant.objects.create(product=self.product, name="Variant 1")
         variant1.attributes.add(self.size_value, self.color_value)
-        
+
         # Try to create a duplicate variant
         variant2 = ProductVariant(product=self.product, name="Variant 2")
         variant2.attributes.add(self.size_value, self.color_value)
-        
+
         # Check that a ValidationError is raised on save
         with self.assertRaises(ValidationError):
             variant2.save()
@@ -218,17 +203,17 @@ class ProductVariantTest(TestCase):
         # Create a ProductVariant with different attributes to avoid duplication
         variant1 = ProductVariant.objects.create(product=self.product, name="Variant 1")
         variant1.attributes.add(self.size_value, self.color_value)
-        
+
         # Create a different attribute option and value
-        new_color_option = ProductAttributeOption.objects.create(attribute=self.attribute_color, value="Black")
+        new_color_option = AttributeOption.objects.create(attribute=self.attribute_color, value="Black")
         new_color_value = ProductAttributeValue.objects.create(
             product=self.product, attribute=self.attribute_color, option=new_color_option
         )
-        
+
         # Create a non-duplicate variant with different color
         variant2 = ProductVariant.objects.create(product=self.product, name="Variant 2")
         variant2.attributes.add(self.size_value, new_color_value)
-        
+
         # This should not raise an error, so we assert that variant2 is saved successfully
         variant2.save()
         self.assertEqual(ProductVariant.objects.count(), 2)
